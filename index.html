@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Video Annotation Tool</title>
+
+<style>
+body { margin:0; font-family:Arial; display:flex; height:100vh; }
+#video-container { flex:4; background:black; display:flex; flex-direction:column; }
+video { max-width:100%; max-height:100%; }
+#controls { padding:8px; background:#111; color:white; display:flex; gap:10px; flex-wrap:wrap; }
+#panel { flex:1; padding:12px; border-left:1px solid #ccc; overflow-y:auto; }
+select, input, button, textarea { padding:5px; font-size:14px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th, td { border:1px solid #ccc; padding:4px; }
+button { cursor:pointer; }
+</style>
+</head>
+
+<body>
+
+<div id="video-container">
+  <video id="video" controls></video>
+
+  <div id="controls">
+    <select id="fileList" onchange="loadSelectedVideo()">
+      <option value="">Select video…</option>
+    </select>
+    <button onclick="setStart()">Set Start</button>
+    <button onclick="setEnd()">Set End</button>
+    <button onclick="convertToStreaming()" title="Re-mux with faststart for streaming">Convert to streaming</button>
+    <span id="timeDisplay">Time: 0.0s</span>
+  </div>
+</div>
+
+<div id="panel">
+  <h3>Annotation</h3>
+
+  <label>Action:
+    <select id="action">
+      <option>peel</option>
+      <option>cold cut</option>
+      <option>hot cut</option>
+      <option>spread</option>
+      <option>cauterize</option>
+      <option>other</option>
+    </select>
+  </label>
+
+  <label>Start <input id="startTime" type="number" step="0.1"></label>
+  <label>End <input id="endTime" type="number" step="0.1"></label>
+
+  <textarea id="comments" placeholder="Comments"></textarea>
+
+  <button onclick="addAnnotation()">Add Annotation</button>
+  <button onclick="downloadCSV()">Download CSV</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Action</th><th>Start</th><th>End</th><th>Comments</th><th>Ops</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script>
+const video = document.getElementById("video");
+const timeDisplay = document.getElementById("timeDisplay");
+
+let annotations = [];
+let currentVideo = "";
+
+/* ===== FILE LIST ===== */
+
+async function loadFileList() {
+  const res = await fetch("/list");
+  const files = await res.json();
+
+  const sel = document.getElementById("fileList");
+  sel.innerHTML = `<option value="">Select video…</option>`;
+  files.forEach(f => {
+    const o = document.createElement("option");
+    o.value = f;
+    o.textContent = f;
+    sel.appendChild(o);
+  });
+}
+
+window.onload = loadFileList;
+
+async function loadSelectedVideo() {
+  currentVideo = fileList.value;
+  if (!currentVideo) return;
+
+  video.src = currentVideo;
+  video.load();
+
+  annotations = [];
+  updateTable();
+
+  try {
+    const csv = await fetch(currentVideo.replace(/\.[^/.]+$/, ".csv"));
+    if (csv.ok) loadCSV(await csv.text());
+  } catch {}
+}
+
+async function convertToStreaming() {
+  if (!currentVideo) {
+    alert("Select a video first");
+    return;
+  }
+  const res = await fetch("/convert_to_streaming", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video: currentVideo }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.error || "Convert failed");
+    return;
+  }
+  await loadFileList();
+  fileList.value = data.output;
+  loadSelectedVideo();
+  alert(`Saved as ${data.output}`);
+}
+
+/* ===== VIDEO ===== */
+
+video.addEventListener("timeupdate", () => {
+  timeDisplay.textContent = `Time: ${video.currentTime.toFixed(1)}s`;
+});
+
+function setStart() { startTime.value = video.currentTime.toFixed(1); }
+function setEnd() { endTime.value = video.currentTime.toFixed(1); }
+
+/* ===== ANNOTATIONS ===== */
+
+function addAnnotation() {
+  annotations.push({
+    action: action.value,
+    start: startTime.value,
+    end: endTime.value,
+    comments: comments.value
+  });
+  comments.value = "";
+  updateTable();
+}
+
+function updateTable() {
+  tableBody.innerHTML = "";
+  annotations.forEach((a,i) => {
+    tableBody.innerHTML += `
+      <tr>
+        <td>${a.action}</td>
+        <td>${a.start}</td>
+        <td>${a.end}</td>
+        <td>${a.comments}</td>
+        <td>
+          <button onclick="exportClip(${i})">🎬</button>
+          <button onclick="del(${i})">❌</button>
+        </td>
+      </tr>`;
+  });
+}
+
+function del(i) {
+  annotations.splice(i,1);
+  updateTable();
+}
+
+/* ===== CSV ===== */
+
+function loadCSV(text) {
+  const lines = text.trim().split("\n").slice(1);
+  lines.forEach(l => {
+    const [action,start,end,comments=""] = l.split(",");
+    annotations.push({action,start,end,comments});
+  });
+  updateTable();
+}
+
+function downloadCSV() {
+  let csv = "action,start,end,comments\n";
+  annotations.forEach(a=>{
+    csv += `${a.action},${a.start},${a.end},"${a.comments}"\n`;
+  });
+  const blob = new Blob([csv]);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = currentVideo.replace(/\.[^/.]+$/, ".csv");
+  a.click();
+}
+
+/* ===== CLIP EXPORT ===== */
+
+async function exportClip(i) {
+  const a = annotations[i];
+
+  const res = await fetch("/export_clip", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      video: currentVideo,
+      action: a.action,
+      start: parseFloat(a.start),
+      end: parseFloat(a.end)
+    })
+  });
+
+  if (!res.ok) {
+    alert("Export failed");
+    return;
+  }
+
+  const data = await res.json();
+  const link = document.createElement("a");
+  link.href = `/clips/${data.clip}`;
+  link.download = data.clip;
+  link.click();
+}
+</script>
+
+</body>
+</html>
