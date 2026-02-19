@@ -1,9 +1,9 @@
 {
   "name": "surgical-video-annotation-tool",
   "version": "1.0.0",
-  "description": "A modern React-based surgical video annotation tool",
+  "description": "A modern React-based pure front-end surgical video annotation tool - no server required",
   "private": true,
-  "homepage": "https://YOUR_USERNAME.github.io/video-annotation-tool",
+  "homepage": "https://urology-ai.github.io/video-annotation-tool",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

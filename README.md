@@ -1,15 +1,16 @@
 # Surgical Video Annotation Tool
 
-A modern React-based web application for annotating surgical videos with actions, timestamps, and comments.
+A modern React-based **pure front-end** web application for annotating surgical videos with actions, timestamps, and comments. **No server required** - everything runs locally in your browser!
 
 ## Features
 
-- 🎥 **Video Playback**: Load and play video files with customizable playback speed
+- 🎥 **Video Playback**: Load and play video files directly from your computer with customizable playback speed
 - ⏱️ **Precise Timing**: Set start and end times for annotations with frame-accurate controls
 - 📝 **Action Annotation**: Categorize surgical actions (peel, cold cut, hot cut, spread, cauterize, other)
-- 💾 **Save & Load**: Auto-save to browser storage and export/import JSON/CSV files
+- 💾 **Save & Load**: Auto-save to browser storage and export/import JSON/CSV files - all local, no server needed
 - ⌨️ **Keyboard Shortcuts**: Spacebar for play/pause, arrow keys for navigation
 - 🎨 **Modern UI**: Clean, professional interface designed for medical use
+- 🔒 **100% Local**: All data stays in your browser - videos never leave your computer
 
 ## Getting Started
 
@@ -86,12 +87,16 @@ Or use GitHub Actions for automatic deployment on push.
 
 ## Usage
 
-1. **Load a Video**: Click "📁 Load Video" and select a video file
+1. **Load a Video**: Click "📁 Load Video" and select a video file from your computer (stays local, never uploaded)
 2. **Navigate**: Use arrow keys or skip controls to find the annotation point
 3. **Set Times**: Click "Set Start" and "Set End" buttons or enter times manually
 4. **Add Annotation**: Select action type, enter comments, and click "➕ Add Annotation"
-5. **Save**: Annotations auto-save to browser storage. Use "💾 Save" to download JSON file
-6. **Export**: Click "📥 Export CSV" to download annotations as CSV
+5. **Auto-Save**: Annotations automatically save to your browser's local storage
+6. **Save**: Use "💾 Save" to download annotations as a JSON file to your computer
+7. **Load**: Use "📂 Load" to import previously saved JSON or CSV files
+8. **Export**: Click "📥 Export CSV" to download annotations as CSV
+
+**Note**: All video files and annotations are processed locally in your browser. Nothing is sent to any server.
 
 ## Keyboard Shortcuts
 
@@ -129,8 +134,13 @@ peel,10.5,15.2,"Initial tissue separation"
 - React 18
 - Create React App
 - CSS3
-- LocalStorage API
-- File API
+- LocalStorage API (for auto-saving)
+- File API (for loading videos and annotation files)
+- **No backend/server required** - pure client-side application
+
+## Note About server.py
+
+The `server.py` file in this repository is from an earlier version and is **not needed** for the React app. The React application is completely self-contained and runs entirely in the browser without any server.
 
 ## License
 
