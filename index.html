@@ -1,226 +1,825 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Video Annotation Tool</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surgical Video Annotation Tool</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-<style>
-body { margin:0; font-family:Arial; display:flex; height:100vh; }
-#video-container { flex:4; background:black; display:flex; flex-direction:column; }
-video { max-width:100%; max-height:100%; }
-#controls { padding:8px; background:#111; color:white; display:flex; gap:10px; flex-wrap:wrap; }
-#panel { flex:1; padding:12px; border-left:1px solid #ccc; overflow-y:auto; }
-select, input, button, textarea { padding:5px; font-size:14px; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th, td { border:1px solid #ccc; padding:4px; }
-button { cursor:pointer; }
-</style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    #video-container {
+      flex: 4;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    video {
+      max-width: 100%;
+      max-height: calc(100% - 80px);
+      object-fit: contain;
+    }
+
+    #controls {
+      width: 100%;
+      padding: 12px 16px;
+      background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+      color: white;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    }
+
+    #controls button {
+      padding: 8px 16px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    #controls button:hover {
+      background: #357abd;
+      transform: translateY(-1px);
+    }
+
+    #controls button:active {
+      transform: translateY(0);
+    }
+
+    #controls button.secondary {
+      background: #555;
+    }
+
+    #controls button.secondary:hover {
+      background: #666;
+    }
+
+    #controls input[type="file"] {
+      display: none;
+    }
+
+    .file-btn {
+      padding: 8px 16px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .file-btn:hover {
+      background: #218838;
+    }
+
+    .skip-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255,255,255,0.1);
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    .skip-controls label {
+      font-size: 13px;
+      margin-right: 4px;
+    }
+
+    .skip-controls input[type="number"] {
+      width: 70px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 13px;
+    }
+
+    .skip-controls button {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    select {
+      padding: 6px 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    select option {
+      background: #1a1a1a;
+      color: white;
+    }
+
+    #timeDisplay {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: #4a90e2;
+      padding: 6px 12px;
+      background: rgba(74, 144, 226, 0.1);
+      border-radius: 4px;
+    }
+
+    #panel {
+      flex: 1;
+      min-width: 350px;
+      max-width: 450px;
+      padding: 20px;
+      background: white;
+      border-left: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+    }
+
+    #panel h3 {
+      color: #2c3e50;
+      font-size: 20px;
+      margin-bottom: 8px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #4a90e2;
+    }
+
+    #panel h4 {
+      color: #34495e;
+      font-size: 16px;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    input[type="number"], select, textarea {
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    input[type="number"]:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #4a90e2;
+    }
+
+    .time-input {
+      width: 100%;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #panel button {
+      padding: 10px 20px;
+      background: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    #panel button:hover {
+      background: #357abd;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+    }
+
+    #panel button:active {
+      transform: translateY(0);
+    }
+
+    #panel button.save-btn {
+      background: #28a745;
+    }
+
+    #panel button.save-btn:hover {
+      background: #218838;
+    }
+
+    #panel button.load-btn {
+      background: #17a2b8;
+    }
+
+    #panel button.load-btn:hover {
+      background: #138496;
+    }
+
+    .save-load-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .save-load-group button {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      background: white;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    thead {
+      background: linear-gradient(180deg, #4a90e2 0%, #357abd 100%);
+      color: white;
+    }
+
+    th {
+      padding: 10px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 12px;
+    }
+
+    tbody tr:hover {
+      background: #f8f9fa;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .comments-cell {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .action-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .action-peel { background: #fff3cd; color: #856404; }
+    .action-cold-cut { background: #d1ecf1; color: #0c5460; }
+    .action-hot-cut { background: #f8d7da; color: #721c24; }
+    .action-spread { background: #d4edda; color: #155724; }
+    .action-cauterize { background: #f5c6cb; color: #721c24; }
+    .action-other { background: #e2e3e5; color: #383d41; }
+
+    .delete-btn {
+      padding: 4px 10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.2s;
+    }
+
+    .delete-btn:hover {
+      background: #c82333;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    .status-saved {
+      background: #28a745;
+    }
+
+    .status-unsaved {
+      background: #ffc107;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .empty-state::before {
+      content: "📝";
+      font-size: 48px;
+      display: block;
+      margin-bottom: 12px;
+    }
+  </style>
 </head>
-
 <body>
 
 <div id="video-container">
   <video id="video" controls></video>
 
   <div id="controls">
-    <select id="fileList" onchange="loadSelectedVideo()">
-      <option value="">Select video…</option>
-    </select>
+    <label for="videoFile" class="file-btn">📁 Load Video</label>
+    <input type="file" id="videoFile" accept="video/*">
+    <input type="file" id="csvFile" accept=".csv,.json" style="display:none">
+    
+    <div class="skip-controls">
+      <label>Skip (sec):</label>
+      <input type="number" id="skipSeconds" value="1" min="0.1" step="0.1">
+      <button onclick="skipBackward()">← Back</button>
+      <button onclick="skipForward()">Forward →</button>
+    </div>
+    
+    <label>Speed:
+      <select id="playbackSpeed" onchange="updatePlaybackSpeed()">
+        <option value="0.1">0.1x (10 fps)</option>
+        <option value="0.25">0.25x</option>
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x (Normal)</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+    </label>
+    
     <button onclick="setStart()">Set Start</button>
     <button onclick="setEnd()">Set End</button>
-    <button onclick="convertToStreaming()" title="Re-mux with faststart for streaming">Convert to streaming</button>
     <span id="timeDisplay">Time: 0.0s</span>
   </div>
 </div>
 
 <div id="panel">
-  <h3>Annotation</h3>
+  <h3>📋 Surgical Annotation</h3>
 
-  <label>Action:
+  <div class="form-group">
+    <label>Action Type:</label>
     <select id="action">
-      <option>peel</option>
-      <option>cold cut</option>
-      <option>hot cut</option>
-      <option>spread</option>
-      <option>cauterize</option>
-      <option>other</option>
+      <option value="peel">Peel</option>
+      <option value="cold cut">Cold Cut</option>
+      <option value="hot cut">Hot Cut</option>
+      <option value="spread">Spread</option>
+      <option value="cauterize">Cauterize</option>
+      <option value="other">Other</option>
     </select>
-  </label>
+  </div>
 
-  <label>Start <input id="startTime" type="number" step="0.1"></label>
-  <label>End <input id="endTime" type="number" step="0.1"></label>
+  <div class="form-group">
+    <label>Start Time (seconds):</label>
+    <input type="number" id="startTime" class="time-input" step="0.1" min="0" placeholder="0.0">
+  </div>
 
-  <textarea id="comments" placeholder="Comments"></textarea>
+  <div class="form-group">
+    <label>End Time (seconds):</label>
+    <input type="number" id="endTime" class="time-input" step="0.1" min="0" placeholder="0.0">
+  </div>
 
-  <button onclick="addAnnotation()">Add Annotation</button>
-  <button onclick="downloadCSV()">Download CSV</button>
+  <div class="form-group">
+    <label>Comments:</label>
+    <textarea id="comments" placeholder="Add notes or observations about this surgical action..."></textarea>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Action</th><th>Start</th><th>End</th><th>Comments</th><th>Ops</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <div class="button-group">
+    <button onclick="addAnnotation()">➕ Add Annotation</button>
+  </div>
+
+  <div class="save-load-group">
+    <button class="save-btn" onclick="saveAnnotations()">💾 Save</button>
+    <button class="load-btn" onclick="loadAnnotations()">📂 Load</button>
+    <button onclick="downloadCSV()">📥 Export CSV</button>
+  </div>
+
+  <div style="margin-top: 8px; font-size: 12px; color: #666;">
+    <span id="saveStatus"></span>
+  </div>
+
+  <h4>Annotations (<span id="annotationCount">0</span>)</h4>
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Start (s)</th>
+          <th>End (s)</th>
+          <th>Comments</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr>
+          <td colspan="5" class="empty-state">No annotations yet. Add your first annotation above.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const video = document.getElementById("video");
-const timeDisplay = document.getElementById("timeDisplay");
+  const video = document.getElementById("video");
+  const timeDisplay = document.getElementById("timeDisplay");
+  const csvFileInput = document.getElementById("csvFile");
+  const saveStatus = document.getElementById("saveStatus");
+  const annotationCount = document.getElementById("annotationCount");
 
-let annotations = [];
-let currentVideo = "";
+  let annotations = [];
+  let currentVideoBasename = "";
+  let hasUnsavedChanges = false;
+  const STORAGE_KEY = "surgical_annotations";
 
-/* ===== FILE LIST ===== */
-
-async function loadFileList() {
-  const res = await fetch("/list");
-  const files = await res.json();
-
-  const sel = document.getElementById("fileList");
-  sel.innerHTML = `<option value="">Select video…</option>`;
-  files.forEach(f => {
-    const o = document.createElement("option");
-    o.value = f;
-    o.textContent = f;
-    sel.appendChild(o);
-  });
-}
-
-window.onload = loadFileList;
-
-async function loadSelectedVideo() {
-  currentVideo = fileList.value;
-  if (!currentVideo) return;
-
-  video.src = currentVideo;
-  video.load();
-
-  annotations = [];
-  updateTable();
-
-  try {
-    const csv = await fetch(currentVideo.replace(/\.[^/.]+$/, ".csv"));
-    if (csv.ok) loadCSV(await csv.text());
-  } catch {}
-}
-
-async function convertToStreaming() {
-  if (!currentVideo) {
-    alert("Select a video first");
-    return;
+  // Auto-save to localStorage
+  function autoSave() {
+    try {
+      const data = {
+        videoBasename: currentVideoBasename,
+        annotations: annotations,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      hasUnsavedChanges = false;
+      updateSaveStatus();
+    } catch (e) {
+      console.error("Auto-save failed:", e);
+    }
   }
-  const res = await fetch("/convert_to_streaming", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ video: currentVideo }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    alert(data.error || "Convert failed");
-    return;
+
+  function updateSaveStatus() {
+    if (hasUnsavedChanges) {
+      saveStatus.innerHTML = '<span class="status-indicator status-unsaved"></span>Unsaved changes';
+    } else {
+      saveStatus.innerHTML = '<span class="status-indicator status-saved"></span>Saved';
+    }
   }
-  await loadFileList();
-  fileList.value = data.output;
-  loadSelectedVideo();
-  alert(`Saved as ${data.output}`);
-}
 
-/* ===== VIDEO ===== */
+  function updateAnnotationCount() {
+    annotationCount.textContent = annotations.length;
+  }
 
-video.addEventListener("timeupdate", () => {
-  timeDisplay.textContent = `Time: ${video.currentTime.toFixed(1)}s`;
-});
-
-function setStart() { startTime.value = video.currentTime.toFixed(1); }
-function setEnd() { endTime.value = video.currentTime.toFixed(1); }
-
-/* ===== ANNOTATIONS ===== */
-
-function addAnnotation() {
-  annotations.push({
-    action: action.value,
-    start: startTime.value,
-    end: endTime.value,
-    comments: comments.value
+  document.getElementById("videoFile").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) {
+      video.src = URL.createObjectURL(file);
+      video.load();
+      
+      currentVideoBasename = file.name.replace(/\.[^/.]+$/, "");
+      
+      // Try to auto-load saved annotations for this video
+      loadFromLocalStorage();
+      
+      // Also try to load CSV if available
+      csvFileInput.click();
+    }
   });
-  comments.value = "";
-  updateTable();
-}
 
-function updateTable() {
-  tableBody.innerHTML = "";
-  annotations.forEach((a,i) => {
-    tableBody.innerHTML += `
-      <tr>
-        <td>${a.action}</td>
+  csvFileInput.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'csv') {
+        loadCSV(file);
+      } else if (ext === 'json') {
+        loadJSON(file);
+      }
+    }
+    csvFileInput.value = "";
+  });
+
+  function loadFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.videoBasename === currentVideoBasename && data.annotations) {
+          annotations = data.annotations;
+          updateTable();
+          updateAnnotationCount();
+          hasUnsavedChanges = false;
+          updateSaveStatus();
+        }
+      }
+    } catch (e) {
+      console.error("Load from localStorage failed:", e);
+    }
+  }
+
+  function loadCSV(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const csv = event.target.result;
+      const lines = csv.split('\n');
+      
+      annotations = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line === "") continue;
+        
+        const parts = parseCSVLine(line);
+        if (parts.length >= 3) {
+          annotations.push({
+            action: parts[0],
+            start: parts[1],
+            end: parts[2],
+            comments: parts[3] || ""
+          });
+        }
+      }
+      
+      updateTable();
+      updateAnnotationCount();
+      hasUnsavedChanges = true;
+      updateSaveStatus();
+      autoSave();
+      
+      alert(`Loaded ${annotations.length} annotations from CSV`);
+    };
+    reader.readAsText(file);
+  }
+
+  function loadJSON(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (data.annotations && Array.isArray(data.annotations)) {
+          annotations = data.annotations;
+          updateTable();
+          updateAnnotationCount();
+          hasUnsavedChanges = true;
+          updateSaveStatus();
+          autoSave();
+          alert(`Loaded ${annotations.length} annotations from JSON`);
+        } else {
+          alert("Invalid JSON format");
+        }
+      } catch (e) {
+        alert("Error loading JSON file: " + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    
+    return result.map(s => s.trim().replace(/^"|"$/g, ''));
+  }
+
+  function currentTime() {
+    return parseFloat(video.currentTime.toFixed(1));
+  }
+
+  video.addEventListener("timeupdate", () => {
+    timeDisplay.textContent = `Time: ${currentTime()}s`;
+  });
+
+  function skipBackward() {
+    const skipAmount = parseFloat(document.getElementById("skipSeconds").value) || 1;
+    video.currentTime = Math.max(0, video.currentTime - skipAmount);
+  }
+
+  function skipForward() {
+    const skipAmount = parseFloat(document.getElementById("skipSeconds").value) || 1;
+    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + skipAmount);
+  }
+
+  function updatePlaybackSpeed() {
+    const speed = parseFloat(document.getElementById("playbackSpeed").value);
+    video.playbackRate = speed;
+  }
+
+  function setStart() {
+    document.getElementById("startTime").value = currentTime();
+  }
+
+  function setEnd() {
+    document.getElementById("endTime").value = currentTime();
+  }
+
+  function addAnnotation() {
+    const action = document.getElementById("action").value;
+    const start = document.getElementById("startTime").value;
+    const end = document.getElementById("endTime").value;
+    const comments = document.getElementById("comments").value;
+
+    if (start === "" || end === "") {
+      alert("Please set both Start and End times");
+      return;
+    }
+
+    if (parseFloat(start) >= parseFloat(end)) {
+      alert("End time must be greater than start time");
+      return;
+    }
+
+    annotations.push({ action, start, end, comments });
+    updateTable();
+    updateAnnotationCount();
+    
+    document.getElementById("comments").value = "";
+    hasUnsavedChanges = true;
+    updateSaveStatus();
+    autoSave();
+  }
+
+  function updateTable() {
+    const body = document.getElementById("tableBody");
+    body.innerHTML = "";
+    
+    if (annotations.length === 0) {
+      body.innerHTML = '<tr><td colspan="5" class="empty-state">No annotations yet. Add your first annotation above.</td></tr>';
+      return;
+    }
+    
+    annotations.forEach((a, index) => {
+      const row = document.createElement("tr");
+      const escapedComments = escapeHTML(a.comments);
+      const actionClass = a.action.toLowerCase().replace(/\s+/g, '-');
+      row.innerHTML = `
+        <td><span class="action-badge action-${actionClass}">${escapeHTML(a.action)}</span></td>
         <td>${a.start}</td>
         <td>${a.end}</td>
-        <td>${a.comments}</td>
-        <td>
-          <button onclick="exportClip(${i})">🎬</button>
-          <button onclick="del(${i})">❌</button>
-        </td>
-      </tr>`;
-  });
-}
-
-function del(i) {
-  annotations.splice(i,1);
-  updateTable();
-}
-
-/* ===== CSV ===== */
-
-function loadCSV(text) {
-  const lines = text.trim().split("\n").slice(1);
-  lines.forEach(l => {
-    const [action,start,end,comments=""] = l.split(",");
-    annotations.push({action,start,end,comments});
-  });
-  updateTable();
-}
-
-function downloadCSV() {
-  let csv = "action,start,end,comments\n";
-  annotations.forEach(a=>{
-    csv += `${a.action},${a.start},${a.end},"${a.comments}"\n`;
-  });
-  const blob = new Blob([csv]);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = currentVideo.replace(/\.[^/.]+$/, ".csv");
-  a.click();
-}
-
-/* ===== CLIP EXPORT ===== */
-
-async function exportClip(i) {
-  const a = annotations[i];
-
-  const res = await fetch("/export_clip", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      video: currentVideo,
-      action: a.action,
-      start: parseFloat(a.start),
-      end: parseFloat(a.end)
-    })
-  });
-
-  if (!res.ok) {
-    alert("Export failed");
-    return;
+        <td class="comments-cell" title="${escapedComments}">${escapedComments || '-'}</td>
+        <td><button class="delete-btn" onclick="deleteAnnotation(${index})">Delete</button></td>
+      `;
+      body.appendChild(row);
+    });
   }
 
-  const data = await res.json();
-  const link = document.createElement("a");
-  link.href = `/clips/${data.clip}`;
-  link.download = data.clip;
-  link.click();
-}
+  function deleteAnnotation(index) {
+    if (confirm("Delete this annotation?")) {
+      annotations.splice(index, 1);
+      updateTable();
+      updateAnnotationCount();
+      hasUnsavedChanges = true;
+      updateSaveStatus();
+      autoSave();
+    }
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function escapeCSV(str) {
+    if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function saveAnnotations() {
+    const data = {
+      videoBasename: currentVideoBasename,
+      annotations: annotations,
+      timestamp: new Date().toISOString(),
+      version: "1.0"
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    const filename = currentVideoBasename ? `${currentVideoBasename}_annotations.json` : "annotations.json";
+    link.download = filename;
+    link.click();
+    
+    hasUnsavedChanges = false;
+    updateSaveStatus();
+  }
+
+  function loadAnnotations() {
+    csvFileInput.accept = ".json";
+    csvFileInput.click();
+    csvFileInput.accept = ".csv,.json";
+  }
+
+  function downloadCSV() {
+    let csv = "action,start_time,end_time,comments\n";
+    annotations.forEach(a => {
+      csv += `${escapeCSV(a.action)},${a.start},${a.end},${escapeCSV(a.comments)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    const filename = currentVideoBasename ? `${currentVideoBasename}.csv` : "annotations.csv";
+    link.download = filename;
+    link.click();
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space" && e.target.tagName !== "TEXTAREA" && e.target.tagName !== "INPUT") {
+      e.preventDefault();
+      video.paused ? video.play() : video.pause();
+    }
+    
+    if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+    
+    if (e.code === "ArrowLeft") {
+      e.preventDefault();
+      skipBackward();
+    } else if (e.code === "ArrowRight") {
+      e.preventDefault();
+      skipForward();
+    }
+  });
+
+  // Initialize
+  updateSaveStatus();
+  updateAnnotationCount();
 </script>
 
 </body>

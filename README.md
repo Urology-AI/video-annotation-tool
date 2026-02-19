@@ -1,47 +1,141 @@
-# Video Annotation Tool
+# Surgical Video Annotation Tool
 
-A simple web app for annotating videos with timestamps and action labels. Designed for labeling surgical or procedural actions (e.g. peel, cold cut, hot cut, spread, cauterize) with start/end times and optional comments. Annotations are stored as CSV and you can export clips for each segment.
+A modern React-based web application for annotating surgical videos with actions, timestamps, and comments.
 
-## Requirements
+## Features
 
-- **Python 3.8+** with FastAPI and Uvicorn
-- **ffmpeg** (for clip export)
+- 🎥 **Video Playback**: Load and play video files with customizable playback speed
+- ⏱️ **Precise Timing**: Set start and end times for annotations with frame-accurate controls
+- 📝 **Action Annotation**: Categorize surgical actions (peel, cold cut, hot cut, spread, cauterize, other)
+- 💾 **Save & Load**: Auto-save to browser storage and export/import JSON/CSV files
+- ⌨️ **Keyboard Shortcuts**: Spacebar for play/pause, arrow keys for navigation
+- 🎨 **Modern UI**: Clean, professional interface designed for medical use
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
 ```bash
-pip install fastapi uvicorn pydantic
+git clone https://github.com/YOUR_USERNAME/video-annotation-tool.git
+cd video-annotation-tool
 ```
 
-## Run
-
-From the project directory:
-
+2. Install dependencies:
 ```bash
-python -m uvicorn server:app --reload --host 0.0.0.0 --port 8000
+npm install
 ```
 
-Then open **http://localhost:8000** in your browser.
+3. Start the development server:
+```bash
+npm start
+```
 
-Place video files (`.mp4`, `.mov`, `.avi`, `.mkv`, `.webm`) in the same directory as `server.py`; they will appear in the "Select video…" dropdown.
+The app will open at [http://localhost:3000](http://localhost:3000)
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+This creates an optimized production build in the `build` folder.
+
+## Deployment to GitHub Pages
+
+1. Update the `homepage` field in `package.json` with your GitHub Pages URL:
+```json
+"homepage": "https://YOUR_USERNAME.github.io/video-annotation-tool"
+```
+
+2. Install gh-pages if not already installed:
+```bash
+npm install --save-dev gh-pages
+```
+
+3. Deploy to GitHub Pages:
+```bash
+npm run deploy
+```
+
+This will:
+- Build the app for production
+- Deploy it to the `gh-pages` branch
+- Make it available at your GitHub Pages URL
+
+### Manual Deployment Steps
+
+If you prefer manual deployment:
+
+1. Build the app:
+```bash
+npm run build
+```
+
+2. Push the `build` folder contents to the `gh-pages` branch:
+```bash
+git subtree push --prefix build origin gh-pages
+```
+
+Or use GitHub Actions for automatic deployment on push.
 
 ## Usage
 
-1. **Select a video** from the dropdown.
-2. **Scrub** to a frame and click **Set Start** or **Set End** to fill the annotation times (or type them manually).
-3. Choose an **Action** (peel, cold cut, hot cut, spread, cauterize, other) and add **Comments** if needed.
-4. Click **Add Annotation** to add a row to the table.
-5. **Download CSV** to save annotations; the file is named like `yourvideo.csv` next to the video.
-6. If a `.csv` with the same base name as the video exists, it is loaded when you select that video.
-7. Use **Export** on a row to create a clip (via ffmpeg) and download it; clips are saved in the `clips/` folder.
-8. **Convert to streaming** re-muxes the current video with `-movflags faststart -c copy` and saves it as `videoname_fast.mp4` in the same folder (no re-encode). Use this if the video doesn’t seek or stream well because metadata is at the end of the file.
+1. **Load a Video**: Click "📁 Load Video" and select a video file
+2. **Navigate**: Use arrow keys or skip controls to find the annotation point
+3. **Set Times**: Click "Set Start" and "Set End" buttons or enter times manually
+4. **Add Annotation**: Select action type, enter comments, and click "➕ Add Annotation"
+5. **Save**: Annotations auto-save to browser storage. Use "💾 Save" to download JSON file
+6. **Export**: Click "📥 Export CSV" to download annotations as CSV
 
-## CSV format
+## Keyboard Shortcuts
 
-```text
-action,start,end,comments
-peel,10.5,15.2,"some note"
-cold cut,20.0,25.1,
+- **Spacebar**: Play/Pause video
+- **Left Arrow**: Skip backward
+- **Right Arrow**: Skip forward
+
+## File Formats
+
+### JSON Format
+```json
+{
+  "videoBasename": "surgery_video",
+  "annotations": [
+    {
+      "action": "peel",
+      "start": "10.5",
+      "end": "15.2",
+      "comments": "Initial tissue separation"
+    }
+  ],
+  "timestamp": "2026-02-19T12:00:00.000Z",
+  "version": "1.0"
+}
 ```
 
-## Clip export
+### CSV Format
+```csv
+action,start_time,end_time,comments
+peel,10.5,15.2,"Initial tissue separation"
+```
 
-Clip export uses ffmpeg (stream copy, no re-encode). Clips are named like `videoname_action_10.5_15.2.mp4` (e.g. `surgery_peel_10.5_15.2.mp4`) and served from `/clips/`. Ensure **ffmpeg** is installed and on your `PATH`.
+## Technologies Used
+
+- React 18
+- Create React App
+- CSS3
+- LocalStorage API
+- File API
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

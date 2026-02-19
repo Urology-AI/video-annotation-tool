@@ -1,0 +1,123 @@
+.video-container {
+  flex: 4;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.video-container video {
+  max-width: 100%;
+  max-height: calc(100% - 80px);
+  object-fit: contain;
+}
+
+.controls {
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  color: white;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+}
+
+.controls button {
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.controls button:hover {
+  background: #357abd;
+  transform: translateY(-1px);
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+.controls input[type="file"] {
+  display: none;
+}
+
+.file-btn {
+  padding: 8px 16px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-block;
+}
+
+.file-btn:hover {
+  background: #218838;
+}
+
+.skip-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255,255,255,0.1);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.skip-controls label {
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.skip-controls input[type="number"] {
+  width: 70px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 13px;
+}
+
+.skip-controls button {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.controls select {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.controls select option {
+  background: #1a1a1a;
+  color: white;
+}
+
+#timeDisplay {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a90e2;
+  padding: 6px 12px;
+  background: rgba(74, 144, 226, 0.1);
+  border-radius: 4px;
+}
