@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect, useCallback } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useState } from 'react';
 import './VideoPlayer.css';
 
 const VideoPlayer = forwardRef(({
@@ -8,10 +8,15 @@ const VideoPlayer = forwardRef(({
   skipSeconds,
   setSkipSeconds,
   playbackSpeed,
-  setPlaybackSpeed
+  setPlaybackSpeed,
+  annotations = [],
+  showAnnotations = true,
+  setShowAnnotations
 }, ref) => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [hasVideo, setHasVideo] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(1);
 
   useImperativeHandle(ref, () => ({
     video: videoRef.current,
@@ -37,6 +42,7 @@ const VideoPlayer = forwardRef(({
       const url = URL.createObjectURL(file);
       videoRef.current.src = url;
       videoRef.current.load();
+      setHasVideo(true);
       
       const basename = file.name.replace(/\.[^/.]+$/, "");
       onVideoLoad(basename);
@@ -47,6 +53,15 @@ const VideoPlayer = forwardRef(({
     if (videoRef.current) {
       const time = parseFloat(videoRef.current.currentTime.toFixed(1));
       onTimeUpdate(time);
+      if (videoRef.current.duration && !isNaN(videoRef.current.duration)) {
+        setVideoDuration(videoRef.current.duration);
+      }
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current && videoRef.current.duration) {
+      setVideoDuration(videoRef.current.duration);
     }
   };
 
@@ -89,57 +104,156 @@ const VideoPlayer = forwardRef(({
     };
   }, [handleKeyDown]);
 
+  const handleLoadVideoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const getActiveAnnotations = () => {
+    if (!hasVideo || !showAnnotations || annotations.length === 0) return [];
+    return annotations.filter(a => {
+      const start = parseFloat(a.start);
+      const end = parseFloat(a.end);
+      return currentTime >= start && currentTime <= end;
+    });
+  };
+
+  // Update duration when video metadata loads
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && video.duration && !isNaN(video.duration)) {
+      setVideoDuration(video.duration);
+    }
+  }, [hasVideo]);
+
+  const jumpToAnnotation = (startTime) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = parseFloat(startTime);
+    }
+  };
+
+  const activeAnnotations = getActiveAnnotations();
+
   return (
     <div className="video-container">
-      <video
-        ref={videoRef}
-        controls
-        onTimeUpdate={handleTimeUpdate}
+      <div className="video-wrapper">
+        <video
+          ref={videoRef}
+          controls
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+        />
+        {!hasVideo && (
+          <div className="video-overlay">
+            <button className="load-video-btn" onClick={handleLoadVideoClick}>
+              <span className="icon">📁</span>
+              <span className="text">Load Video</span>
+            </button>
+          </div>
+        )}
+        
+        {hasVideo && showAnnotations && annotations.length > 0 && (
+          <div className="annotations-overlay">
+            <div className="annotations-timeline">
+              {annotations.map((annotation, index) => {
+                const start = parseFloat(annotation.start);
+                const end = parseFloat(annotation.end);
+                // Use video duration if available, otherwise estimate from max end time
+                const maxEndTime = Math.max(...annotations.map(a => parseFloat(a.end)), end);
+                const duration = videoDuration > 1 ? videoDuration : Math.max(maxEndTime * 1.1, 100);
+                const leftPercent = Math.min(Math.max((start / duration) * 100, 0), 100);
+                const rightEdge = Math.min(((end / duration) * 100), 100);
+                const widthPercent = Math.max(rightEdge - leftPercent, 0.5); // Minimum 0.5% width
+                const isActive = currentTime >= start && currentTime <= end;
+                
+                return (
+                  <div
+                    key={`annotation-${index}-${start}-${end}`}
+                    className={`annotation-marker ${isActive ? 'active' : ''}`}
+                    style={{
+                      left: `${leftPercent}%`,
+                      width: `${widthPercent}%`
+                    }}
+                    onClick={() => jumpToAnnotation(start)}
+                    title={`${annotation.action}: ${start}s - ${end}s${annotation.comments ? ` - ${annotation.comments}` : ''}`}
+                  >
+                    {widthPercent > 3 && (
+                      <span className="annotation-label">{annotation.action}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {activeAnnotations.length > 0 && (
+              <div className="active-annotations">
+                {activeAnnotations.map((annotation, index) => (
+                  <div key={`active-${index}`} className="active-annotation-badge">
+                    <span className="badge-action">{annotation.action}</span>
+                    {annotation.comments && (
+                      <span className="badge-comments">{annotation.comments}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <input
+        ref={fileInputRef}
+        type="file"
+        id="videoFile"
+        accept="video/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
       />
       
       <div className="controls">
-        <label htmlFor="videoFile" className="file-btn">
-          📁 Load Video
-        </label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          id="videoFile"
-          accept="video/*"
-          onChange={handleFileChange}
-        />
+        <div className="control-group">
+          <button className="control-btn icon-btn" onClick={handleLoadVideoClick} title="Load Video">
+            <span>📁</span>
+          </button>
+        </div>
         
-        <div className="skip-controls">
-          <label>Skip (sec):</label>
+        <div className="control-group skip-controls">
+          <label className="control-label">Skip</label>
           <input
             type="number"
-            id="skipSeconds"
+            className="skip-input"
             value={skipSeconds}
             min="0.1"
             step="0.1"
             onChange={(e) => setSkipSeconds(parseFloat(e.target.value) || 1)}
           />
-          <button onClick={skipBackward}>← Back</button>
-          <button onClick={skipForward}>Forward →</button>
+          <button className="control-btn" onClick={skipBackward} title="Skip Backward">
+            ⏪
+          </button>
+          <button className="control-btn" onClick={skipForward} title="Skip Forward">
+            ⏩
+          </button>
         </div>
         
-        <label>
-          Speed:
+        <div className="control-group">
+          <label className="control-label">Speed</label>
           <select
-            id="playbackSpeed"
+            className="speed-select"
             value={playbackSpeed}
             onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
           >
-            <option value="0.1">0.1x (10 fps)</option>
+            <option value="0.1">0.1x</option>
             <option value="0.25">0.25x</option>
             <option value="0.5">0.5x</option>
-            <option value="1">1x (Normal)</option>
+            <option value="1">1x</option>
             <option value="1.5">1.5x</option>
             <option value="2">2x</option>
           </select>
-        </label>
+        </div>
         
-        <span id="timeDisplay">Time: {currentTime}s</span>
+        <div className="control-group time-display">
+          <span className="time-label">Time</span>
+          <span className="time-value">{currentTime.toFixed(1)}s</span>
+        </div>
       </div>
     </div>
   );

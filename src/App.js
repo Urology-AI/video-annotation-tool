@@ -13,6 +13,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [skipSeconds, setSkipSeconds] = useState(1);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showAnnotations, setShowAnnotations] = useState(true);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -73,6 +74,13 @@ function App() {
     setHasUnsavedChanges(true);
   };
 
+  const updateAnnotation = (index, updatedAnnotation) => {
+    const newAnnotations = [...annotations];
+    newAnnotations[index] = updatedAnnotation;
+    setAnnotations(newAnnotations);
+    setHasUnsavedChanges(true);
+  };
+
   const loadAnnotations = (loadedAnnotations) => {
     setAnnotations(loadedAnnotations);
     setHasUnsavedChanges(true);
@@ -93,6 +101,9 @@ function App() {
         setSkipSeconds={setSkipSeconds}
         playbackSpeed={playbackSpeed}
         setPlaybackSpeed={setPlaybackSpeed}
+        annotations={annotations}
+        showAnnotations={showAnnotations}
+        setShowAnnotations={setShowAnnotations}
       />
       <AnnotationPanel
         annotations={annotations}
@@ -100,10 +111,13 @@ function App() {
         currentTime={currentTime}
         videoRef={videoRef}
         onAddAnnotation={addAnnotation}
+        onUpdateAnnotation={updateAnnotation}
         onDeleteAnnotation={deleteAnnotation}
         onLoadAnnotations={loadAnnotations}
         hasUnsavedChanges={hasUnsavedChanges}
         onClearUnsavedChanges={clearUnsavedChanges}
+        showAnnotations={showAnnotations}
+        setShowAnnotations={setShowAnnotations}
       />
     </div>
   );

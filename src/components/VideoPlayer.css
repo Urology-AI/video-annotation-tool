@@ -1,123 +1,381 @@
 .video-container {
   flex: 4;
-  background: #000;
+  background: #0a0a0a;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   position: relative;
+  min-height: 0;
+}
+
+.video-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  min-height: 0;
+  overflow: visible;
 }
 
 .video-container video {
   max-width: 100%;
-  max-height: calc(100% - 80px);
+  max-height: 100%;
   object-fit: contain;
+  display: block;
+}
+
+.video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: all;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.load-video-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 32px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2c3e50;
+  border: 2px dashed #4a90e2;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.load-video-btn:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+  border-color: #357abd;
+}
+
+.load-video-btn .icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.load-video-btn .text {
+  font-size: 16px;
 }
 
 .controls {
   width: 100%;
-  padding: 12px 16px;
-  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #1e1e1e 0%, #141414 100%);
   color: white;
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   flex-wrap: wrap;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 -2px 20px rgba(0,0,0,0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.controls button {
-  padding: 8px 16px;
-  background: #4a90e2;
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.control-btn {
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.controls button:hover {
-  background: #357abd;
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
-.controls button:active {
+.control-btn:active {
   transform: translateY(0);
 }
 
-.controls input[type="file"] {
-  display: none;
+.control-btn.icon-btn {
+  padding: 8px 12px;
+  background: #4a90e2;
+  border-color: #4a90e2;
 }
 
-.file-btn {
-  padding: 8px 16px;
+.control-btn.icon-btn:hover {
+  background: #357abd;
+  border-color: #357abd;
+}
+
+.control-btn.active {
   background: #28a745;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-  display: inline-block;
+  border-color: #28a745;
 }
 
-.file-btn:hover {
+.control-btn.active:hover {
   background: #218838;
+  border-color: #218838;
+}
+
+.btn-text {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.annotations-overlay {
+  position: absolute;
+  bottom: 70px;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 10;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.annotations-timeline {
+  position: relative;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.7);
+  margin: 0 20px;
+  border-radius: 8px;
+  overflow: visible;
+  pointer-events: all;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.annotation-marker {
+  position: absolute;
+  height: 100%;
+  background: rgba(74, 144, 226, 0.6);
+  border: 2px solid #4a90e2;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  overflow: hidden;
+  animation: markerAppear 0.3s ease;
+}
+
+@keyframes markerAppear {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.annotation-marker:hover {
+  background: rgba(74, 144, 226, 0.7);
+  border-color: #357abd;
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+.annotation-marker.active {
+  background: rgba(40, 167, 69, 0.8);
+  border-color: #28a745;
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+  z-index: 3;
+  transform: scaleY(1.1);
+}
+
+.annotation-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+  pointer-events: none;
+}
+
+.active-annotations {
+  position: absolute;
+  top: -60px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.active-annotation-badge {
+  background: rgba(40, 167, 69, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: slideIn 0.3s ease;
+  border: 2px solid #28a745;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.badge-action {
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.badge-comments {
+  font-size: 12px;
+  opacity: 0.9;
+  font-style: italic;
 }
 
 .skip-controls {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.05);
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.skip-controls label {
-  font-size: 13px;
-  margin-right: 4px;
-}
-
-.skip-controls input[type="number"] {
-  width: 70px;
-  padding: 4px 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+.skip-input {
+  width: 65px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
   font-size: 13px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
 }
 
-.skip-controls button {
-  padding: 6px 12px;
-  font-size: 13px;
+.skip-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.controls select {
-  padding: 6px 12px;
-  border: 1px solid rgba(255,255,255,0.2);
+.skip-input::-webkit-inner-spin-button,
+.skip-input::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+.speed-select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
   font-size: 13px;
   cursor: pointer;
+  min-width: 70px;
 }
 
-.controls select option {
+.speed-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.speed-select option {
   background: #1a1a1a;
   color: white;
 }
 
-#timeDisplay {
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
+.time-display {
+  margin-left: auto;
+  padding: 6px 14px;
+  background: rgba(74, 144, 226, 0.15);
+  border-radius: 6px;
+  border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.time-label {
+  font-size: 11px;
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 8px;
+}
+
+.time-value {
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 700;
   color: #4a90e2;
-  padding: 6px 12px;
-  background: rgba(74, 144, 226, 0.1);
-  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .controls {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  
+  .control-group {
+    gap: 6px;
+  }
+  
+  .time-display {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
 }
