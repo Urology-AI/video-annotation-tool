@@ -22,6 +22,8 @@ const AnnotationPanel = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
+  const [showImportText, setShowImportText] = useState(false);
+  const [importText, setImportText] = useState('');
   const [editingIndex, setEditingIndex] = useState(null);
   const [editAction, setEditAction] = useState('');
   const [editStartTime, setEditStartTime] = useState('');
@@ -320,6 +322,113 @@ const AnnotationPanel = ({
     }
   };
 
+  const parseImportText = (text) => {
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const annotations = [];
+    let currentAnnotation = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (!trimmed) continue;
+      
+      // Check if line contains "Start:" or "Start"
+      const startMatch = trimmed.match(/start\s*:?\s*(\d+\.?\d*)/i);
+      if (startMatch) {
+        if (!currentAnnotation) {
+          currentAnnotation = { action: '', start: '', end: '', comments: '' };
+        }
+        currentAnnotation.start = startMatch[1];
+        continue;
+      }
+      
+      // Check if line contains "End:" or "End"
+      const endMatch = trimmed.match(/end\s*:?\s*(\d+\.?\d*)/i);
+      if (endMatch) {
+        if (!currentAnnotation) {
+          currentAnnotation = { action: '', start: '', end: '', comments: '' };
+        }
+        currentAnnotation.end = endMatch[1];
+        
+        // If we have action, start, and end, save the annotation
+        if (currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
+          annotations.push({
+            action: currentAnnotation.action.trim(),
+            start: currentAnnotation.start,
+            end: currentAnnotation.end,
+            comments: currentAnnotation.comments || ''
+          });
+          currentAnnotation = null;
+        }
+        continue;
+      }
+      
+      // If no current annotation or action is missing, treat line as action
+      if (!currentAnnotation || !currentAnnotation.action) {
+        // Save previous annotation if complete
+        if (currentAnnotation && currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
+          annotations.push({
+            action: currentAnnotation.action.trim(),
+            start: currentAnnotation.start,
+            end: currentAnnotation.end,
+            comments: currentAnnotation.comments || ''
+          });
+        }
+        
+        // Start new annotation with this line as action
+        currentAnnotation = {
+          action: trimmed,
+          start: '',
+          end: '',
+          comments: ''
+        };
+      } else {
+        // Add to comments if it's not a time field
+        if (!trimmed.match(/^\d+\.?\d*$/)) {
+          if (currentAnnotation.comments) {
+            currentAnnotation.comments += ' ' + trimmed;
+          } else {
+            currentAnnotation.comments = trimmed;
+          }
+        }
+      }
+    }
+
+    // Add last annotation if complete
+    if (currentAnnotation && currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
+      annotations.push({
+        action: currentAnnotation.action.trim(),
+        start: currentAnnotation.start,
+        end: currentAnnotation.end,
+        comments: currentAnnotation.comments || ''
+      });
+    }
+
+    return annotations;
+  };
+
+  const handleImportText = () => {
+    if (!importText.trim()) {
+      alert("Please enter text to import");
+      return;
+    }
+
+    const parsedAnnotations = parseImportText(importText);
+    
+    if (parsedAnnotations.length === 0) {
+      alert("No valid annotations found. Please check the format:\n\nAction\nStart: time\nEnd: time");
+      return;
+    }
+
+    // Add parsed annotations
+    parsedAnnotations.forEach(annotation => {
+      onAddAnnotation(annotation);
+    });
+
+    setImportText('');
+    setShowImportText(false);
+    alert(`Imported ${parsedAnnotations.length} annotation(s)`);
+  };
+
   return (
     <div className="panel">
       <h3>📋 Surgical Annotation</h3>
@@ -447,6 +556,45 @@ const AnnotationPanel = ({
                   <span>{showAnnotations ? '👁️' : '👁️‍🗨️'}</span>
                   <span>Show on Video</span>
                 </button>
+              </div>
+              
+              <div className="import-text-section">
+                <button 
+                  className="import-text-btn"
+                  onClick={() => setShowImportText(!showImportText)}
+                >
+                  {showImportText ? '✕' : '📝'} Import Text
+                </button>
+                {showImportText && (
+                  <div className="import-text-box">
+                    <textarea
+                      className="import-textarea"
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                      placeholder={`Enter annotations in format:
+Action name
+Start: 10.5
+End: 15.2
+
+Or:
+peel
+Start: 20.0
+End: 25.5`}
+                      rows={8}
+                    />
+                    <div className="import-text-actions">
+                      <button className="import-btn" onClick={handleImportText}>
+                        Import
+                      </button>
+                      <button className="cancel-import-btn" onClick={() => {
+                        setShowImportText(false);
+                        setImportText('');
+                      }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="save-load-group">

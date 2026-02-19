@@ -382,6 +382,93 @@ textarea {
   transform: translateY(0);
 }
 
+.import-text-section {
+  width: 100%;
+}
+
+.import-text-btn {
+  width: 100%;
+  padding: 10px 14px;
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.import-text-btn:hover {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.import-text-box {
+  background: #f8f9fa;
+  border: 2px solid #17a2b8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.import-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.import-textarea:focus {
+  outline: none;
+  border-color: #17a2b8;
+  box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1);
+}
+
+.import-text-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.import-btn {
+  flex: 1;
+  padding: 8px 16px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.import-btn:hover {
+  background: #218838;
+}
+
+.cancel-import-btn {
+  flex: 1;
+  padding: 8px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.cancel-import-btn:hover {
+  background: #5a6268;
+}
+
 .save-load-group {
   display: flex;
   gap: 10px;
