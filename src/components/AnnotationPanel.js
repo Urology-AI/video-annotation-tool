@@ -323,16 +323,15 @@ const AnnotationPanel = ({
   };
 
   const parseImportText = (text) => {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
     const annotations = [];
     let currentAnnotation = null;
 
     for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
-      if (!trimmed) continue;
+      const line = lines[i];
       
       // Check if line contains "Start:" or "Start"
-      const startMatch = trimmed.match(/start\s*:?\s*(\d+\.?\d*)/i);
+      const startMatch = line.match(/start\s*:?\s*(\d+\.?\d*)/i);
       if (startMatch) {
         if (!currentAnnotation) {
           currentAnnotation = { action: '', start: '', end: '', comments: '' };
@@ -342,7 +341,7 @@ const AnnotationPanel = ({
       }
       
       // Check if line contains "End:" or "End"
-      const endMatch = trimmed.match(/end\s*:?\s*(\d+\.?\d*)/i);
+      const endMatch = line.match(/end\s*:?\s*(\d+\.?\d*)/i);
       if (endMatch) {
         if (!currentAnnotation) {
           currentAnnotation = { action: '', start: '', end: '', comments: '' };
@@ -353,9 +352,9 @@ const AnnotationPanel = ({
         if (currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
           annotations.push({
             action: currentAnnotation.action.trim(),
-            start: currentAnnotation.start,
-            end: currentAnnotation.end,
-            comments: currentAnnotation.comments || ''
+            start: currentAnnotation.start.toString(),
+            end: currentAnnotation.end.toString(),
+            comments: (currentAnnotation.comments || '').trim()
           });
           currentAnnotation = null;
         }
@@ -368,26 +367,26 @@ const AnnotationPanel = ({
         if (currentAnnotation && currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
           annotations.push({
             action: currentAnnotation.action.trim(),
-            start: currentAnnotation.start,
-            end: currentAnnotation.end,
-            comments: currentAnnotation.comments || ''
+            start: currentAnnotation.start.toString(),
+            end: currentAnnotation.end.toString(),
+            comments: (currentAnnotation.comments || '').trim()
           });
         }
         
         // Start new annotation with this line as action
         currentAnnotation = {
-          action: trimmed,
+          action: line,
           start: '',
           end: '',
           comments: ''
         };
       } else {
         // Add to comments if it's not a time field
-        if (!trimmed.match(/^\d+\.?\d*$/)) {
+        if (!line.match(/^\d+\.?\d*$/)) {
           if (currentAnnotation.comments) {
-            currentAnnotation.comments += ' ' + trimmed;
+            currentAnnotation.comments += ' ' + line;
           } else {
-            currentAnnotation.comments = trimmed;
+            currentAnnotation.comments = line;
           }
         }
       }
@@ -397,9 +396,9 @@ const AnnotationPanel = ({
     if (currentAnnotation && currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
       annotations.push({
         action: currentAnnotation.action.trim(),
-        start: currentAnnotation.start,
-        end: currentAnnotation.end,
-        comments: currentAnnotation.comments || ''
+        start: currentAnnotation.start.toString(),
+        end: currentAnnotation.end.toString(),
+        comments: (currentAnnotation.comments || '').trim()
       });
     }
 
@@ -419,14 +418,30 @@ const AnnotationPanel = ({
       return;
     }
 
-    // Add parsed annotations
-    parsedAnnotations.forEach(annotation => {
-      onAddAnnotation(annotation);
+    // Validate all annotations before adding
+    const validAnnotations = parsedAnnotations.filter(ann => {
+      if (!ann.action || !ann.start || !ann.end) {
+        return false;
+      }
+      const start = parseFloat(ann.start);
+      const end = parseFloat(ann.end);
+      if (isNaN(start) || isNaN(end) || start >= end) {
+        return false;
+      }
+      return true;
     });
+
+    if (validAnnotations.length === 0) {
+      alert("No valid annotations found. Please check that:\n- Action is provided\n- Start time < End time\n- Times are valid numbers");
+      return;
+    }
+
+    // Use onLoadAnnotations to batch add all annotations
+    onLoadAnnotations([...annotations, ...validAnnotations]);
 
     setImportText('');
     setShowImportText(false);
-    alert(`Imported ${parsedAnnotations.length} annotation(s)`);
+    alert(`Imported ${validAnnotations.length} annotation(s) successfully`);
   };
 
   return (
