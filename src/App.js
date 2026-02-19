@@ -14,6 +14,7 @@ function App() {
   const [skipSeconds, setSkipSeconds] = useState(1);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showAnnotations, setShowAnnotations] = useState(true);
+  const [selectedAnnotationIndex, setSelectedAnnotationIndex] = useState(null);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -104,6 +105,7 @@ function App() {
         annotations={annotations}
         showAnnotations={showAnnotations}
         setShowAnnotations={setShowAnnotations}
+        onSelectAnnotation={setSelectedAnnotationIndex}
       />
       <AnnotationPanel
         annotations={annotations}
@@ -118,6 +120,8 @@ function App() {
         onClearUnsavedChanges={clearUnsavedChanges}
         showAnnotations={showAnnotations}
         setShowAnnotations={setShowAnnotations}
+        selectedAnnotationIndex={selectedAnnotationIndex}
+        setSelectedAnnotationIndex={setSelectedAnnotationIndex}
       />
     </div>
   );

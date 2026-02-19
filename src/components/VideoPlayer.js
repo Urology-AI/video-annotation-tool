@@ -1,4 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useState } from 'react';
+import { MdEdit } from 'react-icons/md';
 import './VideoPlayer.css';
 
 const VideoPlayer = forwardRef(({
@@ -11,12 +12,31 @@ const VideoPlayer = forwardRef(({
   setPlaybackSpeed,
   annotations = [],
   showAnnotations = true,
-  setShowAnnotations
+  setShowAnnotations,
+  onSelectAnnotation
 }, ref) => {
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   const [videoDuration, setVideoDuration] = useState(1);
+
+  const formatTime = (seconds) => {
+    const totalSeconds = parseFloat(seconds);
+    if (isNaN(totalSeconds)) return '00:00:00';
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const secsInt = Math.floor(secs);
+    const hasDecimal = secs % 1 !== 0;
+    const secsDecimal = hasDecimal ? (secs % 1).toFixed(1).substring(1) : '';
+    
+    // Always format as HH:MM:SS or HH:MM:SS.S
+    const secsFormatted = hasDecimal
+      ? secsInt.toString().padStart(2, '0') + secsDecimal
+      : secsInt.toString().padStart(2, '0');
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secsFormatted}`;
+  };
 
   useImperativeHandle(ref, () => ({
     video: videoRef.current,
@@ -186,14 +206,30 @@ const VideoPlayer = forwardRef(({
             
             {activeAnnotations.length > 0 && (
               <div className="active-annotations">
-                {activeAnnotations.map((annotation, index) => (
-                  <div key={`active-${index}`} className="active-annotation-badge">
-                    <span className="badge-action">{annotation.action}</span>
-                    {annotation.comments && (
-                      <span className="badge-comments">{annotation.comments}</span>
-                    )}
-                  </div>
-                ))}
+                {activeAnnotations.map((annotation, index) => {
+                  const annotationIndex = annotations.findIndex(a => 
+                    parseFloat(a.start) === parseFloat(annotation.start) && 
+                    parseFloat(a.end) === parseFloat(annotation.end) &&
+                    a.action === annotation.action
+                  );
+                  return (
+                    <div key={`active-${index}`} className="active-annotation-badge">
+                      <span className="badge-action">{annotation.action}</span>
+                      {annotation.comments && (
+                        <span className="badge-comments">{annotation.comments}</span>
+                      )}
+                      {onSelectAnnotation && annotationIndex !== -1 && (
+                        <span 
+                          className="badge-edit-icon"
+                          onClick={() => onSelectAnnotation(annotationIndex)}
+                          title="Edit annotation"
+                        >
+                          <MdEdit />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -252,7 +288,7 @@ const VideoPlayer = forwardRef(({
         
         <div className="control-group time-display">
           <span className="time-label">Time</span>
-          <span className="time-value">{currentTime.toFixed(1)}s</span>
+          <span className="time-value">{formatTime(currentTime)}</span>
         </div>
       </div>
     </div>

@@ -1,4 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { 
+  MdListAlt, 
+  MdEdit, 
+  MdClose, 
+  MdSave, 
+  MdAdd, 
+  MdDelete, 
+  MdFolderOpen, 
+  MdFileDownload,
+  MdCheckCircle
+} from 'react-icons/md';
 import './AnnotationPanel.css';
 
 const AnnotationPanel = ({
@@ -13,7 +24,9 @@ const AnnotationPanel = ({
   hasUnsavedChanges,
   onClearUnsavedChanges,
   showAnnotations,
-  setShowAnnotations
+  setShowAnnotations,
+  selectedAnnotationIndex,
+  setSelectedAnnotationIndex
 }) => {
   const [action, setAction] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -26,11 +39,9 @@ const AnnotationPanel = ({
   const [importText, setImportText] = useState('');
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [previewAnnotations, setPreviewAnnotations] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editAction, setEditAction] = useState('');
-  const [editStartTime, setEditStartTime] = useState('');
-  const [editEndTime, setEditEndTime] = useState('');
-  const [editComments, setEditComments] = useState('');
+  const selectedIndex = selectedAnnotationIndex !== null && selectedAnnotationIndex !== undefined 
+    ? selectedAnnotationIndex 
+    : null;
   const fileInputRef = useRef(null);
   const actionInputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -49,6 +60,39 @@ const AnnotationPanel = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action]);
+
+  // Sync form fields when annotation is selected externally (from video player)
+  useEffect(() => {
+    if (selectedIndex !== null && selectedIndex !== undefined && annotations[selectedIndex]) {
+      const annotation = annotations[selectedIndex];
+      setAction(annotation.action);
+      // Format time for display
+      const formatTime = (seconds) => {
+        const totalSeconds = parseFloat(seconds);
+        if (isNaN(totalSeconds)) return seconds;
+        const hours = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        const secsInt = Math.floor(secs);
+        const hasDecimal = secs % 1 !== 0;
+        const secsDecimal = hasDecimal ? (secs % 1).toFixed(1).substring(1) : '';
+        const secsFormatted = hasDecimal
+          ? secsInt.toString().padStart(2, '0') + secsDecimal
+          : secsInt.toString().padStart(2, '0');
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secsFormatted}`;
+      };
+      setStartTime(formatTime(annotation.start));
+      setEndTime(formatTime(annotation.end));
+      setComments(annotation.comments || '');
+    } else if (selectedIndex === null) {
+      // Clear form when selection is cleared
+      setAction('');
+      setStartTime('');
+      setEndTime('');
+      setComments('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIndex]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -99,14 +143,16 @@ const AnnotationPanel = ({
     
     const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = (totalSeconds % 60).toFixed(1);
+    const secs = totalSeconds % 60;
+    const secsInt = Math.floor(secs);
+    const hasDecimal = secs % 1 !== 0;
+    const secsDecimal = hasDecimal ? (secs % 1).toFixed(1).substring(1) : ''; // Get ".X" part if exists
     
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.padStart(4, '0')}`;
-    } else if (mins > 0) {
-      return `${mins}:${secs.padStart(4, '0')}`;
-    }
-    return secs;
+    // Always format as HH:MM:SS or HH:MM:SS.S
+    const secsFormatted = hasDecimal
+      ? secsInt.toString().padStart(2, '0') + secsDecimal
+      : secsInt.toString().padStart(2, '0');
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secsFormatted}`;
   };
 
   const setStart = () => {
@@ -148,27 +194,33 @@ const AnnotationPanel = ({
       return;
     }
 
-    const newAnnotation = {
+    const annotationData = {
       action: action.trim(),
       start: startSeconds,
       end: endSeconds,
       comments
     };
-    
-    onAddAnnotation(newAnnotation);
 
-    setStartTime("");
-    setEndTime("");
-    setComments("");
-    setShowSuggestions(false);
-    
-    // Scroll to bottom of annotations table to show new annotation
-    setTimeout(() => {
-      const tableContainer = document.querySelector('.table-container');
-      if (tableContainer) {
-        tableContainer.scrollTop = tableContainer.scrollHeight;
-      }
-    }, 100);
+    if (selectedIndex !== null && selectedIndex !== undefined) {
+      // Update existing annotation
+      onUpdateAnnotation(selectedIndex, annotationData);
+      clearSelection();
+    } else {
+      // Add new annotation
+      onAddAnnotation(annotationData);
+      setStartTime("");
+      setEndTime("");
+      setComments("");
+      setShowSuggestions(false);
+      
+      // Scroll to bottom of annotations table to show new annotation
+      setTimeout(() => {
+        const tableContainer = document.querySelector('.table-container');
+        if (tableContainer) {
+          tableContainer.scrollTop = tableContainer.scrollHeight;
+        }
+      }, 100);
+    }
   };
 
   const parseCSVLine = (line) => {
@@ -217,6 +269,9 @@ const AnnotationPanel = ({
       }
       
       onLoadAnnotations(loadedAnnotations);
+      if (setSelectedAnnotationIndex) {
+        setSelectedAnnotationIndex(null);
+      }
       alert(`Loaded ${loadedAnnotations.length} annotations from CSV`);
     };
     reader.readAsText(file);
@@ -229,6 +284,9 @@ const AnnotationPanel = ({
         const data = JSON.parse(event.target.result);
         if (data.annotations && Array.isArray(data.annotations)) {
           onLoadAnnotations(data.annotations);
+          if (setSelectedAnnotationIndex) {
+            setSelectedAnnotationIndex(null);
+          }
           alert(`Loaded ${data.annotations.length} annotations from JSON`);
         } else {
           alert("Invalid JSON format");
@@ -307,51 +365,25 @@ const AnnotationPanel = ({
     return knownActions.includes(normalized) ? normalized : 'other';
   };
 
-  const startEdit = (index) => {
+  const selectAnnotation = (index) => {
     const annotation = annotations[index];
-    setEditingIndex(index);
-    setEditAction(annotation.action);
-    setEditStartTime(formatTimeForDisplay(annotation.start));
-    setEditEndTime(formatTimeForDisplay(annotation.end));
-    setEditComments(annotation.comments);
+    if (setSelectedAnnotationIndex) {
+      setSelectedAnnotationIndex(index);
+    }
+    setAction(annotation.action);
+    setStartTime(formatTimeForDisplay(annotation.start));
+    setEndTime(formatTimeForDisplay(annotation.end));
+    setComments(annotation.comments || '');
   };
 
-  const cancelEdit = () => {
-    setEditingIndex(null);
-    setEditAction('');
-    setEditStartTime('');
-    setEditEndTime('');
-    setEditComments('');
-  };
-
-  const saveEdit = () => {
-    if (!editAction.trim() || !editStartTime || !editEndTime) {
-      alert("Please fill in all required fields");
-      return;
+  const clearSelection = () => {
+    if (setSelectedAnnotationIndex) {
+      setSelectedAnnotationIndex(null);
     }
-
-    // Convert times to seconds if needed
-    const startSeconds = parseTimeToSeconds(editStartTime);
-    const endSeconds = parseTimeToSeconds(editEndTime);
-
-    if (startSeconds === null || endSeconds === null) {
-      alert("Invalid time format. Use HH:MM:SS (1:30:45), HH:MM (1:30), MM:SS (30:45), or seconds (90.5)");
-      return;
-    }
-
-    if (parseFloat(startSeconds) >= parseFloat(endSeconds)) {
-      alert("End time must be greater than start time");
-      return;
-    }
-
-    onUpdateAnnotation(editingIndex, {
-      action: editAction.trim(),
-      start: startSeconds,
-      end: endSeconds,
-      comments: editComments
-    });
-
-    cancelEdit();
+    setAction('');
+    setStartTime('');
+    setEndTime('');
+    setComments('');
   };
 
   const jumpToTime = (time) => {
@@ -557,6 +589,9 @@ const AnnotationPanel = ({
 
     // Add valid annotations
     onLoadAnnotations([...annotations, ...validAnnotations]);
+    if (setSelectedAnnotationIndex) {
+      setSelectedAnnotationIndex(null);
+    }
 
     setImportText('');
     setShowImportText(false);
@@ -580,9 +615,30 @@ const AnnotationPanel = ({
 
   return (
     <div className="panel">
-      <h3>📋 Surgical Annotation</h3>
+      <h3><MdListAlt className="header-icon" /> Surgical Annotation</h3>
+
+      {!showAnnotationsPanel && (
+        <div className="top-actions">
+          <button 
+            className="view-annotations-btn"
+            onClick={() => setShowAnnotationsPanel(true)}
+            title="View All Annotations"
+          >
+            <MdListAlt className="btn-icon" />
+            <span>View Annotations ({annotations.length})</span>
+          </button>
+        </div>
+      )}
 
       <div className="panel-form-section">
+        {selectedIndex !== null && selectedIndex !== undefined && (
+          <div className="edit-mode-indicator">
+            <span><MdEdit className="indicator-icon" /> Editing annotation #{selectedIndex + 1}</span>
+            <span className="close-edit-x" onClick={clearSelection} title="Close edit">
+              <MdClose />
+            </span>
+          </div>
+        )}
       <div className="form-group">
         <label>Action Type:</label>
         <div className="autocomplete-container">
@@ -648,7 +704,13 @@ const AnnotationPanel = ({
       </div>
 
       <div className="button-group">
-        <button onClick={handleAddAnnotation}>➕ Add Annotation</button>
+        <button onClick={handleAddAnnotation}>
+          {selectedIndex !== null && selectedIndex !== undefined ? (
+            <> <MdSave className="btn-icon" /> Save </>
+          ) : (
+            <> <MdAdd className="btn-icon" /> Add Annotation </>
+          )}
+        </button>
       </div>
 
       <div className="button-group">
@@ -662,19 +724,6 @@ const AnnotationPanel = ({
       </div>
       </div>
 
-      {!showAnnotationsPanel && (
-        <div className="bottom-actions">
-          <button 
-            className="view-annotations-btn"
-            onClick={() => setShowAnnotationsPanel(true)}
-            title="View All Annotations"
-          >
-            <span>📋</span>
-            <span>View Annotations ({annotations.length})</span>
-          </button>
-        </div>
-      )}
-
       <input
         ref={fileInputRef}
         type="file"
@@ -687,160 +736,71 @@ const AnnotationPanel = ({
         <div className="annotations-panel-overlay" onClick={() => setShowAnnotationsPanel(false)}>
           <div className="annotations-panel-content" onClick={(e) => e.stopPropagation()}>
             <div className="annotations-panel-header">
-              <h3>📋 Annotations ({annotations.length})</h3>
+              <h3><MdListAlt className="header-icon" /> Annotations ({annotations.length})</h3>
               <button className="close-panel-btn" onClick={() => setShowAnnotationsPanel(false)}>
-                ✕
+                <MdClose />
               </button>
             </div>
             
             <div className="annotations-panel-actions">
-              <div className="view-annotations-toggle">
-                <button 
-                  className={`toggle-btn ${showAnnotations ? 'active' : ''}`}
-                  onClick={() => setShowAnnotations(!showAnnotations)}
-                  title={showAnnotations ? "Hide Annotations on Video" : "Show Annotations on Video"}
-                >
-                  <span>{showAnnotations ? '👁️' : '👁️‍🗨️'}</span>
-                  <span>Show on Video</span>
-                </button>
-              </div>
-              
-              <div className="import-text-section">
-                <button 
-                  className="import-text-btn"
-                  onClick={() => setShowImportText(!showImportText)}
-                >
-                  {showImportText ? '✕' : '📝'} Import Text
-                </button>
-                {showImportText && (
-                  <div className="import-text-box">
-                    <textarea
-                      className="import-textarea"
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                      placeholder={`Enter annotations in format:
-Action name
-Start: 1:30:45
-End: 2:15:30
-
-Or:
-peel
-Start: 1:30
-End: 2:15
-
-Or:
-cut
-Start: 90.5
-End: 135.0
-
-Supports HH:MM:SS, HH:MM, MM:SS, or seconds`}
-                      rows={8}
-                    />
-                    <div className="import-text-actions">
-                      <button className="parse-btn" onClick={handleParseImport}>
-                        Preview & Validate
-                      </button>
-                      <button className="cancel-import-btn" onClick={() => {
-                        setShowImportText(false);
-                        setImportText('');
-                        setShowImportPreview(false);
-                        setPreviewAnnotations([]);
-                      }}>
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
               <div className="save-load-group">
-                <button className="save-btn" onClick={saveAnnotations}>💾 Save</button>
-                <button className="load-btn" onClick={loadAnnotations}>📂 Load</button>
-                <button onClick={downloadCSV}>📥 Export CSV</button>
+                <button className="save-btn" onClick={saveAnnotations}><MdSave className="btn-icon" /> Save</button>
+                <button className="load-btn" onClick={loadAnnotations}><MdFolderOpen className="btn-icon" /> Load</button>
+                <button onClick={downloadCSV}><MdFileDownload className="btn-icon" /> Export CSV</button>
               </div>
             </div>
 
-            <div className="annotations-panel-table">
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Action</th>
-                      <th>Start (s)</th>
-                      <th>End (s)</th>
-                      <th>Comments</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {annotations.length === 0 ? (
+            <div className="annotations-panel-content-wrapper">
+              <div className="annotations-panel-table">
+                <div className="table-container">
+                  <table>
+                    <thead>
                       <tr>
-                        <td colSpan="5" className="empty-state">
-                          No annotations yet. Add your first annotation above.
-                        </td>
+                        <th>Action</th>
+                        <th>Start (s)</th>
+                        <th>End (s)</th>
+                        <th>Comments</th>
+                        <th>Actions</th>
                       </tr>
-                    ) : (
-                      annotations.map((a, index) => (
-                        editingIndex === index ? (
-                          <tr key={index} className="editing-row">
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-input"
-                                value={editAction}
-                                onChange={(e) => setEditAction(e.target.value)}
-                                placeholder="Action"
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-input time-edit"
-                                value={editStartTime}
-                                onChange={(e) => setEditStartTime(e.target.value)}
-                                placeholder="1:30:45 or 90.5"
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-input time-edit"
-                                value={editEndTime}
-                                onChange={(e) => setEditEndTime(e.target.value)}
-                                placeholder="2:15:30 or 135.0"
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                className="edit-input"
-                                value={editComments}
-                                onChange={(e) => setEditComments(e.target.value)}
-                                placeholder="Comments"
-                              />
-                            </td>
-                            <td>
-                              <div className="edit-actions">
-                                <button className="save-edit-btn" onClick={saveEdit} title="Save">
-                                  ✓
-                                </button>
-                                <button className="cancel-edit-btn" onClick={cancelEdit} title="Cancel">
-                                  ✕
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <tr key={index}>
+                    </thead>
+                    <tbody>
+                      {annotations.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="empty-state">
+                            No annotations yet. Add your first annotation above.
+                          </td>
+                        </tr>
+                      ) : (
+                        annotations.map((a, index) => (
+                          <tr 
+                            key={index} 
+                            className={`annotation-row clickable-row ${selectedIndex === index ? 'selected-row' : ''}`}
+                            onClick={() => selectAnnotation(index)}
+                            title="Click to edit"
+                          >
                             <td>
                               <span className={`action-badge action-${getActionClass(a.action)}`}>
                                 {a.action}
                               </span>
                             </td>
-                            <td className="time-cell clickable-time" onClick={() => jumpToTime(a.start)} title="Click to jump to time">
+                            <td 
+                              className="time-cell clickable-time" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                jumpToTime(a.start);
+                              }} 
+                              title="Click to jump to time"
+                            >
                               {formatTimeForDisplay(a.start)}
                             </td>
-                            <td className="time-cell clickable-time" onClick={() => jumpToTime(a.end)} title="Click to jump to time">
+                            <td 
+                              className="time-cell clickable-time" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                jumpToTime(a.end);
+                              }} 
+                              title="Click to jump to time"
+                            >
                               {formatTimeForDisplay(a.end)}
                             </td>
                             <td className="comments-cell">
@@ -848,22 +808,25 @@ Supports HH:MM:SS, HH:MM, MM:SS, or seconds`}
                                 {a.comments || '-'}
                               </div>
                             </td>
-                            <td>
+                            <td onClick={(e) => e.stopPropagation()}>
                               <div className="row-actions">
-                                <button className="edit-btn" onClick={() => startEdit(index)} title="Edit">
-                                  ✏️
-                                </button>
-                                <button className="delete-btn" onClick={() => onDeleteAnnotation(index)} title="Delete">
-                                  🗑️
+                                <button className="delete-btn" onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (selectedIndex === index && setSelectedAnnotationIndex) {
+                                    setSelectedAnnotationIndex(null);
+                                  }
+                                  onDeleteAnnotation(index);
+                                }} title="Delete">
+                                  <MdDelete />
                                 </button>
                               </div>
                             </td>
                           </tr>
-                        )
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -874,9 +837,9 @@ Supports HH:MM:SS, HH:MM, MM:SS, or seconds`}
         <div className="import-preview-overlay" onClick={handleCancelPreview}>
           <div className="import-preview-content" onClick={(e) => e.stopPropagation()}>
             <div className="import-preview-header">
-              <h3>📋 Import Preview</h3>
+              <h3><MdListAlt className="header-icon" /> Import Preview</h3>
               <button className="close-preview-btn" onClick={handleCancelPreview}>
-                ✕
+                <MdClose />
               </button>
             </div>
             
@@ -905,7 +868,7 @@ Supports HH:MM:SS, HH:MM, MM:SS, or seconds`}
                     <tr key={index} className={ann.isValid ? 'preview-valid' : 'preview-invalid'}>
                       <td>
                         {ann.isValid ? (
-                          <span className="status-valid">✓</span>
+                          <span className="status-valid"><MdCheckCircle /></span>
                         ) : (
                           <span className="status-invalid" title={ann.errors.join(', ')}>✗</span>
                         )}

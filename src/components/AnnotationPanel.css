@@ -8,16 +8,62 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: -2px 0 20px rgba(0,0,0,0.08);
   position: relative;
+  height: 100vh;
 }
 
 .panel-form-section {
-  flex-shrink: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+}
+
+.edit-mode-indicator {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+  animation: slideInDown 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edit-mode-indicator .close-edit-x {
+  color: white;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  transition: all 0.2s ease;
+  user-select: none;
+  opacity: 0.8;
+  padding: 0 4px;
+}
+
+.edit-mode-indicator .close-edit-x:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Webkit scrollbar styling */
@@ -48,6 +94,35 @@
   padding-bottom: 16px;
   border-bottom: 2px solid #4a90e2;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  z-index: 10;
+  padding-top: 0;
+  margin-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.header-icon {
+  font-size: 24px;
+  color: #4a90e2;
+}
+
+.btn-icon {
+  font-size: 18px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.indicator-icon {
+  font-size: 16px;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 
 .panel h4 {
@@ -60,13 +135,133 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.annotations-panel-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  gap: 20px;
+  min-height: 0;
+  padding: 20px 24px;
+}
+
 .annotations-panel-table {
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 20px 24px;
+}
+
+.selected-row {
+  background: #e3f2fd !important;
+  border-left: 4px solid #4a90e2;
+}
+
+.selected-row td {
+  background: #e3f2fd !important;
+}
+
+.edit-side-panel {
+  width: 350px;
+  background: #f8f9fa;
+  border-left: 2px solid #4a90e2;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.edit-panel-header {
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #4a90e2 0%, #357abd 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-panel-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.close-edit-x {
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+  transition: color 0.2s ease;
+  user-select: none;
+}
+
+.close-edit-x:hover {
+  color: #dc3545;
+}
+
+.edit-panel-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.edit-panel-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.edit-panel-actions .save-edit-btn {
+  flex: 1;
+  padding: 12px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.edit-panel-actions .save-edit-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.edit-panel-actions .cancel-edit-x {
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+  transition: color 0.2s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.edit-panel-actions .cancel-edit-x:hover {
+  color: #dc3545;
 }
 
 .form-group {
@@ -220,6 +415,12 @@ textarea {
   box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
 }
 
+.top-actions {
+  flex-shrink: 0;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
 .bottom-actions {
   flex-shrink: 0;
   padding-top: 16px;
@@ -289,6 +490,7 @@ textarea {
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -794,7 +996,7 @@ textarea {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e0 #f1f5f9;
   min-height: 300px;
-  max-height: calc(90vh - 250px);
+  max-height: calc(90vh - 200px);
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: white;
@@ -890,6 +1092,19 @@ tbody tr:hover .comments-content {
 
 tbody tr.editing-row:hover td {
   background: #fff9e6 !important;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clickable-row:hover {
+  background: #e3f2fd !important;
+}
+
+.clickable-row:hover td {
+  background: #e3f2fd !important;
 }
 
 tbody tr:last-child td {
@@ -1037,7 +1252,7 @@ tbody tr:last-child td {
   gap: 6px;
 }
 
-.save-edit-btn, .cancel-edit-btn {
+.save-edit-btn {
   padding: 6px 12px;
   border: none;
   border-radius: 6px;
@@ -1045,8 +1260,6 @@ tbody tr:last-child td {
   font-size: 16px;
   font-weight: 700;
   transition: all 0.2s ease;
-  width: 32px;
-  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1063,16 +1276,6 @@ tbody tr:last-child td {
   box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
 }
 
-.cancel-edit-btn {
-  background: #6c757d;
-  color: white;
-}
-
-.cancel-edit-btn:hover {
-  background: #5a6268;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
-}
 
 .empty-state {
   text-align: center;
@@ -1082,8 +1285,6 @@ tbody tr:last-child td {
 }
 
 .empty-state::before {
-  content: "📝";
-  font-size: 48px;
-  display: block;
-  margin-bottom: 12px;
+  content: "";
+  display: none;
 }
