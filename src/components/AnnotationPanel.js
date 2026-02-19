@@ -24,6 +24,8 @@ const AnnotationPanel = ({
   const [showAnnotationsPanel, setShowAnnotationsPanel] = useState(false);
   const [showImportText, setShowImportText] = useState(false);
   const [importText, setImportText] = useState('');
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  const [previewAnnotations, setPreviewAnnotations] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editAction, setEditAction] = useState('');
   const [editStartTime, setEditStartTime] = useState('');
@@ -91,17 +93,33 @@ const AnnotationPanel = ({
     }
   };
 
+  const formatTimeForDisplay = (seconds) => {
+    const totalSeconds = parseFloat(seconds);
+    if (isNaN(totalSeconds)) return seconds;
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = (totalSeconds % 60).toFixed(1);
+    
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.padStart(4, '0')}`;
+    } else if (mins > 0) {
+      return `${mins}:${secs.padStart(4, '0')}`;
+    }
+    return secs;
+  };
+
   const setStart = () => {
     if (videoRef.current?.video) {
       const time = videoRef.current.getCurrentTime();
-      setStartTime(time.toString());
+      setStartTime(formatTimeForDisplay(time));
     }
   };
 
   const setEnd = () => {
     if (videoRef.current?.video) {
       const time = videoRef.current.getCurrentTime();
-      setEndTime(time.toString());
+      setEndTime(formatTimeForDisplay(time));
     }
   };
 
@@ -116,20 +134,31 @@ const AnnotationPanel = ({
       return;
     }
 
-    if (parseFloat(startTime) >= parseFloat(endTime)) {
+    // Convert times to seconds if needed
+    const startSeconds = parseTimeToSeconds(startTime);
+    const endSeconds = parseTimeToSeconds(endTime);
+
+    if (startSeconds === null || endSeconds === null) {
+      alert("Invalid time format. Use HH:MM:SS (1:30:45), HH:MM (1:30), MM:SS (30:45), or seconds (90.5)");
+      return;
+    }
+
+    if (parseFloat(startSeconds) >= parseFloat(endSeconds)) {
       alert("End time must be greater than start time");
       return;
     }
 
     const newAnnotation = {
       action: action.trim(),
-      start: startTime,
-      end: endTime,
+      start: startSeconds,
+      end: endSeconds,
       comments
     };
     
     onAddAnnotation(newAnnotation);
 
+    setStartTime("");
+    setEndTime("");
     setComments("");
     setShowSuggestions(false);
     
@@ -282,8 +311,8 @@ const AnnotationPanel = ({
     const annotation = annotations[index];
     setEditingIndex(index);
     setEditAction(annotation.action);
-    setEditStartTime(annotation.start);
-    setEditEndTime(annotation.end);
+    setEditStartTime(formatTimeForDisplay(annotation.start));
+    setEditEndTime(formatTimeForDisplay(annotation.end));
     setEditComments(annotation.comments);
   };
 
@@ -301,15 +330,24 @@ const AnnotationPanel = ({
       return;
     }
 
-    if (parseFloat(editStartTime) >= parseFloat(editEndTime)) {
+    // Convert times to seconds if needed
+    const startSeconds = parseTimeToSeconds(editStartTime);
+    const endSeconds = parseTimeToSeconds(editEndTime);
+
+    if (startSeconds === null || endSeconds === null) {
+      alert("Invalid time format. Use HH:MM:SS (1:30:45), HH:MM (1:30), MM:SS (30:45), or seconds (90.5)");
+      return;
+    }
+
+    if (parseFloat(startSeconds) >= parseFloat(endSeconds)) {
       alert("End time must be greater than start time");
       return;
     }
 
     onUpdateAnnotation(editingIndex, {
       action: editAction.trim(),
-      start: editStartTime,
-      end: editEndTime,
+      start: startSeconds,
+      end: endSeconds,
       comments: editComments
     });
 
@@ -322,6 +360,43 @@ const AnnotationPanel = ({
     }
   };
 
+  const parseTimeToSeconds = (timeStr) => {
+    if (!timeStr) return null;
+    
+    const trimmed = timeStr.trim();
+    
+    // Handle HH:MM:SS format (e.g., "1:30:45" or "01:30:45")
+    const hhmmssMatch = trimmed.match(/^(\d+):(\d+):(\d+\.?\d*)$/);
+    if (hhmmssMatch) {
+      const hours = parseFloat(hhmmssMatch[1]);
+      const minutes = parseFloat(hhmmssMatch[2]);
+      const seconds = parseFloat(hhmmssMatch[3]);
+      return (hours * 3600 + minutes * 60 + seconds).toFixed(1);
+    }
+    
+    // Handle HH:MM format (e.g., "1:30" - if first number > 23, treat as MM:SS)
+    const hhmmMatch = trimmed.match(/^(\d+):(\d+\.?\d*)$/);
+    if (hhmmMatch) {
+      const first = parseFloat(hhmmMatch[1]);
+      const second = parseFloat(hhmmMatch[2]);
+      
+      // If first number is > 23, treat as MM:SS (minutes:seconds)
+      if (first > 23) {
+        return (first * 60 + second).toFixed(1);
+      }
+      // Otherwise treat as HH:MM (hours:minutes)
+      return (first * 3600 + second * 60).toFixed(1);
+    }
+    
+    // Handle SS format (e.g., "90.5")
+    const secondsMatch = trimmed.match(/^(\d+\.?\d*)$/);
+    if (secondsMatch) {
+      return parseFloat(secondsMatch[1]).toFixed(1);
+    }
+    
+    return null;
+  };
+
   const parseImportText = (text) => {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
     const annotations = [];
@@ -330,23 +405,29 @@ const AnnotationPanel = ({
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Check if line contains "Start:" or "Start"
-      const startMatch = line.match(/start\s*:?\s*(\d+\.?\d*)/i);
+      // Check if line contains "Start:" or "Start" - supports HH:MM:SS, HH:MM, MM:SS, or seconds
+      const startMatch = line.match(/start\s*:?\s*([\d:\.]+)/i);
       if (startMatch) {
         if (!currentAnnotation) {
           currentAnnotation = { action: '', start: '', end: '', comments: '' };
         }
-        currentAnnotation.start = startMatch[1];
+        const timeInSeconds = parseTimeToSeconds(startMatch[1]);
+        if (timeInSeconds !== null) {
+          currentAnnotation.start = timeInSeconds;
+        }
         continue;
       }
       
-      // Check if line contains "End:" or "End"
-      const endMatch = line.match(/end\s*:?\s*(\d+\.?\d*)/i);
+      // Check if line contains "End:" or "End" - supports HH:MM:SS, HH:MM, MM:SS, or seconds
+      const endMatch = line.match(/end\s*:?\s*([\d:\.]+)/i);
       if (endMatch) {
         if (!currentAnnotation) {
           currentAnnotation = { action: '', start: '', end: '', comments: '' };
         }
-        currentAnnotation.end = endMatch[1];
+        const timeInSeconds = parseTimeToSeconds(endMatch[1]);
+        if (timeInSeconds !== null) {
+          currentAnnotation.end = timeInSeconds;
+        }
         
         // If we have action, start, and end, save the annotation
         if (currentAnnotation.action && currentAnnotation.start && currentAnnotation.end) {
@@ -405,7 +486,42 @@ const AnnotationPanel = ({
     return annotations;
   };
 
-  const handleImportText = () => {
+  const validateAnnotation = (ann) => {
+    const errors = [];
+    if (!ann.action || !ann.action.trim()) {
+      errors.push("Missing action");
+    }
+    if (!ann.start) {
+      errors.push("Missing start time");
+    } else {
+      const startSeconds = parseTimeToSeconds(ann.start);
+      if (startSeconds === null) {
+        errors.push("Invalid start time format");
+      } else {
+        ann.startSeconds = startSeconds;
+      }
+    }
+    if (!ann.end) {
+      errors.push("Missing end time");
+    } else {
+      const endSeconds = parseTimeToSeconds(ann.end);
+      if (endSeconds === null) {
+        errors.push("Invalid end time format");
+      } else {
+        ann.endSeconds = endSeconds;
+      }
+    }
+    if (ann.startSeconds !== undefined && ann.endSeconds !== undefined) {
+      if (parseFloat(ann.startSeconds) >= parseFloat(ann.endSeconds)) {
+        errors.push("End time must be greater than start time");
+      }
+    }
+    ann.errors = errors;
+    ann.isValid = errors.length === 0;
+    return ann;
+  };
+
+  const handleParseImport = () => {
     if (!importText.trim()) {
       alert("Please enter text to import");
       return;
@@ -414,34 +530,52 @@ const AnnotationPanel = ({
     const parsedAnnotations = parseImportText(importText);
     
     if (parsedAnnotations.length === 0) {
-      alert("No valid annotations found. Please check the format:\n\nAction\nStart: time\nEnd: time");
+      alert("No annotations found. Please check the format:\n\nAction\nStart: time\nEnd: time");
       return;
     }
 
-    // Validate all annotations before adding
-    const validAnnotations = parsedAnnotations.filter(ann => {
-      if (!ann.action || !ann.start || !ann.end) {
-        return false;
-      }
-      const start = parseFloat(ann.start);
-      const end = parseFloat(ann.end);
-      if (isNaN(start) || isNaN(end) || start >= end) {
-        return false;
-      }
-      return true;
-    });
+    // Validate all annotations
+    const validatedAnnotations = parsedAnnotations.map(ann => validateAnnotation(ann));
+    setPreviewAnnotations(validatedAnnotations);
+    setShowImportPreview(true);
+  };
+
+  const handleConfirmImport = () => {
+    const validAnnotations = previewAnnotations
+      .filter(ann => ann.isValid)
+      .map(ann => ({
+        action: ann.action.trim(),
+        start: ann.startSeconds.toString(),
+        end: ann.endSeconds.toString(),
+        comments: (ann.comments || '').trim()
+      }));
 
     if (validAnnotations.length === 0) {
-      alert("No valid annotations found. Please check that:\n- Action is provided\n- Start time < End time\n- Times are valid numbers");
+      alert("No valid annotations to import. Please fix the errors.");
       return;
     }
 
-    // Use onLoadAnnotations to batch add all annotations
+    // Add valid annotations
     onLoadAnnotations([...annotations, ...validAnnotations]);
 
     setImportText('');
     setShowImportText(false);
+    setShowImportPreview(false);
+    setPreviewAnnotations([]);
     alert(`Imported ${validAnnotations.length} annotation(s) successfully`);
+  };
+
+  const handleCancelPreview = () => {
+    setShowImportPreview(false);
+    setPreviewAnnotations([]);
+  };
+
+  const handleFixPreviewAnnotation = (index, field, value) => {
+    const updated = [...previewAnnotations];
+    updated[index] = { ...updated[index], [field]: value };
+    const validated = validateAnnotation(updated[index]);
+    updated[index] = validated;
+    setPreviewAnnotations(updated);
   };
 
   return (
@@ -481,29 +615,27 @@ const AnnotationPanel = ({
       </div>
 
       <div className="form-group">
-        <label>Start Time (seconds):</label>
+        <label>Start Time:</label>
         <input
-          type="number"
+          type="text"
           className="time-input"
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
-          step="0.1"
-          min="0"
-          placeholder="0.0"
+          placeholder="1:30:45 or 1:30 or 90.5"
         />
+        <small className="time-hint">Format: HH:MM:SS (1:30:45), HH:MM (1:30), MM:SS (30:45), or seconds (90.5)</small>
       </div>
 
       <div className="form-group">
-        <label>End Time (seconds):</label>
+        <label>End Time:</label>
         <input
-          type="number"
+          type="text"
           className="time-input"
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
-          step="0.1"
-          min="0"
-          placeholder="0.0"
+          placeholder="2:15:30 or 2:15 or 135.0"
         />
+        <small className="time-hint">Format: HH:MM:SS (2:15:30), HH:MM (2:15), MM:SS (15:30), or seconds (135.0)</small>
       </div>
 
       <div className="form-group">
@@ -588,22 +720,31 @@ const AnnotationPanel = ({
                       onChange={(e) => setImportText(e.target.value)}
                       placeholder={`Enter annotations in format:
 Action name
-Start: 10.5
-End: 15.2
+Start: 1:30:45
+End: 2:15:30
 
 Or:
 peel
-Start: 20.0
-End: 25.5`}
+Start: 1:30
+End: 2:15
+
+Or:
+cut
+Start: 90.5
+End: 135.0
+
+Supports HH:MM:SS, HH:MM, MM:SS, or seconds`}
                       rows={8}
                     />
                     <div className="import-text-actions">
-                      <button className="import-btn" onClick={handleImportText}>
-                        Import
+                      <button className="parse-btn" onClick={handleParseImport}>
+                        Preview & Validate
                       </button>
                       <button className="cancel-import-btn" onClick={() => {
                         setShowImportText(false);
                         setImportText('');
+                        setShowImportPreview(false);
+                        setPreviewAnnotations([]);
                       }}>
                         Cancel
                       </button>
@@ -653,22 +794,20 @@ End: 25.5`}
                             </td>
                             <td>
                               <input
-                                type="number"
+                                type="text"
                                 className="edit-input time-edit"
                                 value={editStartTime}
                                 onChange={(e) => setEditStartTime(e.target.value)}
-                                step="0.1"
-                                min="0"
+                                placeholder="1:30:45 or 90.5"
                               />
                             </td>
                             <td>
                               <input
-                                type="number"
+                                type="text"
                                 className="edit-input time-edit"
                                 value={editEndTime}
                                 onChange={(e) => setEditEndTime(e.target.value)}
-                                step="0.1"
-                                min="0"
+                                placeholder="2:15:30 or 135.0"
                               />
                             </td>
                             <td>
@@ -699,10 +838,10 @@ End: 25.5`}
                               </span>
                             </td>
                             <td className="time-cell clickable-time" onClick={() => jumpToTime(a.start)} title="Click to jump to time">
-                              {parseFloat(a.start).toFixed(1)}
+                              {formatTimeForDisplay(a.start)}
                             </td>
                             <td className="time-cell clickable-time" onClick={() => jumpToTime(a.end)} title="Click to jump to time">
-                              {parseFloat(a.end).toFixed(1)}
+                              {formatTimeForDisplay(a.end)}
                             </td>
                             <td className="comments-cell">
                               <div className="comments-content" title={a.comments || 'No comments'}>
@@ -725,6 +864,118 @@ End: 25.5`}
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showImportPreview && (
+        <div className="import-preview-overlay" onClick={handleCancelPreview}>
+          <div className="import-preview-content" onClick={(e) => e.stopPropagation()}>
+            <div className="import-preview-header">
+              <h3>📋 Import Preview</h3>
+              <button className="close-preview-btn" onClick={handleCancelPreview}>
+                ✕
+              </button>
+            </div>
+            
+            <div className="import-preview-info">
+              <p>
+                Found <strong>{previewAnnotations.length}</strong> annotation(s). 
+                <span className={previewAnnotations.filter(a => a.isValid).length === previewAnnotations.length ? 'all-valid' : 'has-errors'}>
+                  {' '}{previewAnnotations.filter(a => a.isValid).length} valid, {previewAnnotations.filter(a => !a.isValid).length} with errors
+                </span>
+              </p>
+            </div>
+
+            <div className="import-preview-table-container">
+              <table className="import-preview-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Action</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewAnnotations.map((ann, index) => (
+                    <tr key={index} className={ann.isValid ? 'preview-valid' : 'preview-invalid'}>
+                      <td>
+                        {ann.isValid ? (
+                          <span className="status-valid">✓</span>
+                        ) : (
+                          <span className="status-invalid" title={ann.errors.join(', ')}>✗</span>
+                        )}
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="preview-edit-input"
+                          value={ann.action || ''}
+                          onChange={(e) => handleFixPreviewAnnotation(index, 'action', e.target.value)}
+                          placeholder="Action"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="preview-edit-input"
+                          value={ann.start || ''}
+                          onChange={(e) => handleFixPreviewAnnotation(index, 'start', e.target.value)}
+                          placeholder="1:30:45"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="preview-edit-input"
+                          value={ann.end || ''}
+                          onChange={(e) => handleFixPreviewAnnotation(index, 'end', e.target.value)}
+                          placeholder="2:15:30"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="preview-edit-input"
+                          value={ann.comments || ''}
+                          onChange={(e) => handleFixPreviewAnnotation(index, 'comments', e.target.value)}
+                          placeholder="Comments"
+                        />
+                        {ann.errors.length > 0 && (
+                          <div className="preview-errors">
+                            {ann.errors.map((error, i) => (
+                              <span key={i} className="error-badge">{error}</span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="import-preview-actions">
+              <button className="remove-invalid-btn" onClick={() => {
+                setPreviewAnnotations(previewAnnotations.filter(a => a.isValid));
+              }}>
+                Remove Invalid ({previewAnnotations.filter(a => !a.isValid).length})
+              </button>
+              <div className="preview-action-buttons">
+                <button className="cancel-preview-btn" onClick={handleCancelPreview}>
+                  Cancel
+                </button>
+                <button 
+                  className="confirm-import-btn" 
+                  onClick={handleConfirmImport}
+                  disabled={previewAnnotations.filter(a => a.isValid).length === 0}
+                >
+                  Import {previewAnnotations.filter(a => a.isValid).length} Valid
+                </button>
               </div>
             </div>
           </div>
